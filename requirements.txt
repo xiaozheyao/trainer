@@ -1,0 +1,9 @@
+dm-tree
+ray
+deepspeed
+ninja
+ray
+peft
+datasets
+transformers
+tokenizers
