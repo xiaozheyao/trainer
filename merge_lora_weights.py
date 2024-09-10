@@ -19,7 +19,7 @@ from utils import download_model, get_mirror_link, get_checkpoint_and_refs_dir
 
 # In addition to merging the lora weights, you can also formulate a prompt for the
 # model here to quickly test it after merging
-TEST_EVAL = False
+TEST_EVAL = True
 TEST_PROMPT = (
     "<START_Q>Natalia sold clips to 48 of her friends in April, and then "
     "she sold half as many clips in May. How many clips did Natalia sell "
@@ -100,30 +100,17 @@ def main():
     # Load orignal model
     s = time.time()
     model_id = f"meta-llama/Llama-2-{args.model_name}-hf"
-    s3_bucket = get_mirror_link(model_id)
-    ckpt_path, _ = get_checkpoint_and_refs_dir(model_id=model_id, bucket_uri=s3_bucket)
-
-    print(f"Downloading original model {model_id} from {s3_bucket} to {ckpt_path} ...")
-    print("Loading tokenizer...")
 
     tokenizer = AutoTokenizer.from_pretrained(args.checkpoint, legacy=True)
     tokenizer.save_pretrained(Path(args.output_path))
 
     print(f"Saved tokenizer to {args.output_path}")
 
-    download_model(
-        model_id=model_id,
-        bucket_uri=s3_bucket,
-        s3_sync_args=["--no-sign-request"],
-    )
-
-    print(f"Downloading to {ckpt_path} finished after {time.time() - s} seconds.")
-    print(f"Loading original model from {ckpt_path} ...")
 
     s2 = time.time()
 
     model = AutoModelForCausalLM.from_pretrained(
-        ckpt_path,
+        model_id,
         trust_remote_code=True,
         torch_dtype=torch.bfloat16,
         use_cache=False,
