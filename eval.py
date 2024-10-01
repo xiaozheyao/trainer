@@ -2,7 +2,10 @@ import json
 import transformers
 import torch
 from tqdm import tqdm
-
+from awq import AutoAWQForCausalLM
+from awq.utils.utils import get_best_device
+from transformers import AutoTokenizer, TextStreamer
+from deltazip import AutoDeltaZipModelForCausalLM
 STOP_TOKEN = "<END_A>"
 
 def build_prompts():
@@ -16,7 +19,16 @@ def build_prompts():
     return data
 
 def build_model(args):
-    model = transformers.AutoModelForCausalLM.from_pretrained(args.ckpt_path, torch_dtype=torch.bfloat16)
+    if  args.is_awq:
+        model = AutoAWQForCausalLM.from_quantized(args.ckpt_path, fuse_layers=True)
+    elif args.is_sparsegpt:
+        model = AutoDeltaZipModelForCausalLM.from_compressed(
+            args.ckpt_path, strict=True, device="cpu", unpack=True
+        )
+        model = model.half()
+        model = model.to("cuda")
+    else:
+        model = transformers.AutoModelForCausalLM.from_pretrained(args.ckpt_path, torch_dtype=torch.bfloat16)
     tokenizer = transformers.AutoTokenizer.from_pretrained(args.ckpt_path)
     return model, tokenizer
 
@@ -29,8 +41,10 @@ def evaluate(args):
     stop_token_embeding = tokenizer(
         STOP_TOKEN, return_tensors="pt", add_special_tokens=False
     )["input_ids"].to("cuda")
+    
     def custom_stopping_criteria(embeddings, *args, **kwargs) -> bool:
         return stop_token_embeding in embeddings
+    
     stopping_criteria = transformers.StoppingCriteriaList([custom_stopping_criteria])
     results = []
 
@@ -60,7 +74,8 @@ if __name__=="__main__":
         required=True,
     )
     parser.add_argument("--ckpt-path", type=str, required=True)
+    parser.add_argument("--is-awq", action="store_true", default=False)
+    parser.add_argument("--is-sparsegpt", action="store_true", default=False)
     args = parser.parse_args()
-    
     print("Starting model evaluation")
     evaluate(args)

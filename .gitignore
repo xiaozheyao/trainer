@@ -2,3 +2,4 @@ data/
 artifacts/
 *.pyc
 hf_ckpts/
+eval/
