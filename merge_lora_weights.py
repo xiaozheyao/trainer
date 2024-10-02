@@ -106,7 +106,6 @@ def main():
 
     print(f"Saved tokenizer to {args.output_path}")
 
-
     s2 = time.time()
 
     model = AutoModelForCausalLM.from_pretrained(

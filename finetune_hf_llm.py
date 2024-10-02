@@ -293,9 +293,9 @@ def training_function(kwargs: dict):
     if config["lora"]:
         # Apply LoRA
         s = time.time()
-        lora_config = config['lora_config']
-        lora_config['rank'] = kwargs['lora_rank']
-        lora_config['target_modules'] = kwargs['lora_target_modules']
+        lora_config = config["lora_config"]
+        lora_config["rank"] = kwargs["lora_rank"]
+        lora_config["target_modules"] = kwargs["lora_target_modules"]
         lora_config = LoraConfig(**config["lora_config"])
         expected_num_parameters = get_expected_lora_num_parameters(
             lora_config=lora_config, model=model
@@ -719,11 +719,9 @@ def main():
     with open(args.special_token_path, "r") as json_file:
         special_tokens = json.load(json_file)["tokens"]
 
-    artifact_storage = '/home/xiayao/projects/fmsys/deltaserve/trainer/artifacts'
+    artifact_storage = "/home/xiayao/projects/fmsys/deltaserve/trainer/artifacts"
     user_name = re.sub(r"\s+", "__", os.environ.get("ANYSCALE_USERNAME", "user"))
-    storage_path = (
-        f"file://{artifact_storage}/{user_name}/ft_llms_with_deepspeed/{args.model_name}"
-    )
+    storage_path = f"file://{artifact_storage}/{user_name}/ft_llms_with_deepspeed/{args.model_name}"
     with open(os.path.join(artifact_storage, "ft_config.json"), "w") as f:
         json.dump(config, f)
     trial_name = f"{args.model_name}".split("/")[-1]

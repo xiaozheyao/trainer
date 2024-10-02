@@ -6,7 +6,9 @@ dataset = load_dataset("ise-uiuc/Magicoder-Evol-Instruct-110K")
 
 dataset_splits = {
     "train": load_dataset("ise-uiuc/Magicoder-Evol-Instruct-110K", split="train[:80%]"),
-    "test": load_dataset("ise-uiuc/Magicoder-Evol-Instruct-110K", split="train[80%:100%]"),
+    "test": load_dataset(
+        "ise-uiuc/Magicoder-Evol-Instruct-110K", split="train[80%:100%]"
+    ),
 }
 
 

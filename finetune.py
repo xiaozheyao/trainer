@@ -11,6 +11,7 @@ import time
 import tree
 from typing import Tuple
 import uuid
+
 try:
     import deepspeed  # noqa: F401
 except ImportError as e:
@@ -144,6 +145,7 @@ def get_tokenizer(model_name, special_tokens):
 
     return tokenizer
 
+
 def evaluate(
     *, model, eval_ds, accelerator, bsize, ds_kwargs, as_test: bool = False
 ) -> Tuple[float, float]:
@@ -213,8 +215,7 @@ def checkpoint_model(
 
 
 def training_function(kwargs: dict):
-    print("training_function called")
-
+    print(kwargs)
     # Train has a bug somewhere that causes ACCELERATE_TORCH_DEVICE to not be set
     # properly on multi-gpu nodes
     cuda_visible_device = os.environ["CUDA_VISIBLE_DEVICES"].split(",")
@@ -292,9 +293,12 @@ def training_function(kwargs: dict):
     if config["lora"]:
         # Apply LoRA
         s = time.time()
-        lora_config = config['lora_config']
-        lora_config['rank'] = kwargs['lora_rank']
-        lora_config['target_modules'] = kwargs['lora_target_modules']
+        lora_config = config["lora_config"]
+        config["lora_config"]["r"] = config["lora_rank"]
+        config["lora_config"]["target_modules"] = [
+            x.strip() for x in config["lora_target_modules"].split(",")
+        ]
+        print(config["lora_config"])
         lora_config = LoraConfig(**config["lora_config"])
         expected_num_parameters = get_expected_lora_num_parameters(
             lora_config=lora_config, model=model
@@ -727,19 +731,17 @@ def main():
     # get pwd
     artifact_storage = os.path.abspath(".")
     artifact_id = str(uuid.uuid4()).split("-")[0]
-    storage_path = (
-        f"file://{artifact_storage}/outputs/{artifact_id}"
-    )
+    storage_path = f"file://{artifact_storage}/outputs/{artifact_id}"
     # ignore unserializeable config
     serialized_config = config.copy()
     serialized_config.pop("ds_plugin")
-    os.makedirs(storage_path, exist_ok=True)
-    with open(os.path.join(storage_path, "ft_config.json"), "w") as fp:
+    os.makedirs(os.path.join("outputs", artifact_id), exist_ok=True)
+    with open(os.path.join("outputs", artifact_id, "ft_config.json"), "w") as fp:
         json.dump(serialized_config, fp)
     trial_name = f"{args.model_name}".split("/")[-1]
     if args.lora:
         trial_name += "-lora"
-    
+
     trainer = TorchTrainer(
         training_function,
         train_loop_config={
