@@ -3,3 +3,5 @@ artifacts/
 *.pyc
 hf_ckpts/
 eval/
+outputs/
+.env

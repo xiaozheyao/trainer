@@ -10,7 +10,7 @@ import tempfile
 import time
 import tree
 from typing import Tuple
-
+import uuid
 try:
     import deepspeed  # noqa: F401
 except ImportError as e:
@@ -143,7 +143,6 @@ def get_tokenizer(model_name, special_tokens):
     tokenizer.add_tokens(special_tokens, special_tokens=True)
 
     return tokenizer
-
 
 def evaluate(
     *, model, eval_ds, accelerator, bsize, ds_kwargs, as_test: bool = False
@@ -577,7 +576,7 @@ def parse_args():
 
     parser.add_argument(
         "--batch-size-per-device",
-        "--bs",
+        "-bs",
         type=int,
         default=16,
         help="Batch size to use per device.",
@@ -599,7 +598,7 @@ def parse_args():
     )
 
     parser.add_argument(
-        "--num-devices", "--nd", type=int, default=1, help="Number of devices to use."
+        "--num-devices", "-nd", type=int, default=1, help="Number of devices to use."
     )
     parser.add_argument(
         "--grad_accum", type=int, default=1, help="Gradient accumulation steps."
@@ -635,7 +634,6 @@ def parse_args():
         default=None,
     )
     parser.add_argument("--lr", type=float, default=5e-6, help="Learning rate to use.")
-
     parser.add_argument(
         "--ctx-len",
         type=int,
@@ -663,7 +661,16 @@ def parse_args():
         help="If passed, will enable parameter efficient fine-tuning with LoRA ("
         "https://arxiv.org/pdf/2106.09685.pdf).",
     )
-
+    parser.add_argument(
+        "--lora-target-modules",
+        type=str,
+        default="q_proj,k_proj,v_proj,o_proj,gate_proj,up_proj,down_proj",
+    )
+    parser.add_argument(
+        "--lora-rank",
+        type=int,
+        default=8,
+    )
     args = parser.parse_args()
 
     return args
@@ -672,10 +679,8 @@ def parse_args():
 def main():
 
     args = parse_args()
-
     if not args.output_dir:
         raise ValueError("--output_dir must be specified")
-
     # update the config with args so that we have access to them.
     config = vars(args)
     config.update(
@@ -703,12 +708,12 @@ def main():
 
     ray.init(
         runtime_env={
-            "env_vars": {"HF_HOME": "~/.cache/huggingface"},
             "working_dir": ".",
         }
     )
 
     # Read data
+    print(f"Reading data from {args.train_path}")
     train_ds = ray.data.read_json(args.train_path)
     if args.test_path is not None:
         valid_ds = ray.data.read_json(args.test_path)
@@ -719,17 +724,22 @@ def main():
     with open(args.special_token_path, "r") as json_file:
         special_tokens = json.load(json_file)["tokens"]
 
-    artifact_storage = '/home/xiayao/projects/fmsys/deltaserve/trainer/artifacts'
-    user_name = re.sub(r"\s+", "__", os.environ.get("ANYSCALE_USERNAME", "user"))
+    # get pwd
+    artifact_storage = os.path.abspath(".")
+    artifact_id = str(uuid.uuid4()).split("-")[0]
     storage_path = (
-        f"file://{artifact_storage}/{user_name}/ft_llms_with_deepspeed/{args.model_name}"
+        f"file://{artifact_storage}/outputs/{artifact_id}"
     )
-    with open(os.path.join(artifact_storage, "ft_config.json"), "w") as f:
-        json.dump(config, f)
+    # ignore unserializeable config
+    serialized_config = config.copy()
+    serialized_config.pop("ds_plugin")
+    os.makedirs(storage_path, exist_ok=True)
+    with open(os.path.join(storage_path, "ft_config.json"), "w") as fp:
+        json.dump(serialized_config, fp)
     trial_name = f"{args.model_name}".split("/")[-1]
     if args.lora:
         trial_name += "-lora"
-
+    
     trainer = TorchTrainer(
         training_function,
         train_loop_config={
