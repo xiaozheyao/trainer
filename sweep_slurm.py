@@ -29,7 +29,7 @@ def finetune(args):
     
     for i, job in enumerate(jobs):
         job_id = i%15
-        os.system(f"sbatch -A a09 --job-name ft-13b-{job_id} --dependency=singleton --reservation=sai-shared --wrap {job}")
+        os.system(f"sbatch -A a09 --job-name ft-13b-{job_id} --dependency=singleton --environment=trainer --reservation=sai-shared --wrap {job}")
 
 
 if __name__ == "__main__":
