@@ -8,7 +8,6 @@ nd = 2
 
 def finetune(args):
     jobs = []
-
     lrs = [float(lr) for lr in args.lrs.split(",")]
     models = args.base_models.split(",")
     epochs = args.epochs.split(",")
@@ -16,6 +15,7 @@ def finetune(args):
     train_path = os.path.abspath(args.train_path)
     test_path = os.path.abspath(args.test_path)
     special_token_path = os.path.abspath(args.special_token_path)
+    
     for model in models:
         model_size = model.split("/")[-1].split("-")[-2]
         for lr in lrs:
@@ -23,8 +23,10 @@ def finetune(args):
                 for epoch in epochs:
                     job = f"python finetune.py --batch-size-per-device {bs} --num-devices {nd} --model_name {model} --output_dir outputs/ --lr {lr} --num-epochs {epoch} --ds-config deepspeed_configs/zero_3_llama_2_{model_size}.json --train-path {train_path} --special-token-path {special_token_path} --test-path {test_path} --lora --lora-rank {rank}"
                     jobs.append(job)
+    
     for job in jobs[0:5]:
         print(job)
+    
     for job in jobs:
         os.system(f"ts -G 2 {job}")
 
@@ -37,7 +39,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--base-models",
         type=str,
-        default="meta-llama/Llama-2-7b-hf,meta-llama/Llama-2-13b-hf, meta-llama/Llama-2-70b-hf",
+        default="meta-llama/Llama-2-13b-hf",
     )
     parser.add_argument("--lrs", type=str, default="5e-5,1e-5,5e-6,1e-6")
     parser.add_argument("--epochs", type=str, default="1,2,3,4,5")

@@ -218,10 +218,10 @@ def training_function(kwargs: dict):
     print(kwargs)
     # Train has a bug somewhere that causes ACCELERATE_TORCH_DEVICE to not be set
     # properly on multi-gpu nodes
-    cuda_visible_device = os.environ["CUDA_VISIBLE_DEVICES"].split(",")
+    #cuda_visible_device = os.environ["CUDA_VISIBLE_DEVICES"].split(",")
     local_rank = int(os.environ["LOCAL_RANK"])
-    device_id = cuda_visible_device[local_rank]
-    os.environ["ACCELERATE_TORCH_DEVICE"] = f"cuda:{device_id}"
+    # device_id = cuda_visible_device[local_rank]
+    # os.environ["ACCELERATE_TORCH_DEVICE"] = f"cuda:{device_id}"
 
     config = kwargs["config"]
     args = argparse.Namespace(**kwargs["args"])
@@ -489,8 +489,7 @@ def training_function(kwargs: dict):
             "avg_bwd_time_per_epoch": bwd_time_sum / (step + 1),
             "learning_rate": lr_scheduler.get_lr()[0],
         }
-
-        with tempfile.TemporaryDirectory(dir=args.output_dir) as temp_checkpoint_dir:
+        with tempfile.TemporaryDirectory(dir=config['temp_path']) as temp_checkpoint_dir:
             accelerator.print(f"Saving the model locally at {temp_checkpoint_dir}")
             accelerator.wait_for_everyone()
 
@@ -566,7 +565,6 @@ def training_function(kwargs: dict):
 
 
 def parse_args():
-
     parser = argparse.ArgumentParser(description="Simple example of training script.")
     parser.add_argument(
         "--mx",
@@ -705,7 +703,7 @@ def main():
         with open("./lora_configs/lora.json", "r") as json_file:
             lora_config = json.load(json_file)
         config["lora_config"] = lora_config
-
+        config["lora_config"]['r'] = args.lora_rank
     # Add deepspeed plugin to the config
     ds_plugin = DeepSpeedPlugin(hf_ds_config=config.get("ds_config"))
     config.update(ds_plugin=ds_plugin)
@@ -733,6 +731,7 @@ def main():
     artifact_id = str(uuid.uuid4()).split("-")[0]
     storage_path = f"file://{artifact_storage}/outputs/{artifact_id}"
     # ignore unserializeable config
+    temp_path = os.path.abspath(os.path.join("outputs", artifact_id))
     serialized_config = config.copy()
     serialized_config.pop("ds_plugin")
     os.makedirs(os.path.join("outputs", artifact_id), exist_ok=True)
@@ -741,7 +740,7 @@ def main():
     trial_name = f"{args.model_name}".split("/")[-1]
     if args.lora:
         trial_name += "-lora"
-
+    config['temp_path'] = temp_path
     trainer = TorchTrainer(
         training_function,
         train_loop_config={
