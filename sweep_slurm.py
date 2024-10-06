@@ -3,7 +3,7 @@ from typing import List
 
 # global parameters
 bs = 16
-nd = 2
+nd = 4
 
 
 def finetune(args):
@@ -27,8 +27,9 @@ def finetune(args):
     for job in jobs[0:5]:
         print(job)
     
-    for job in jobs:
-        os.system(f"ts -G 2 {job}")
+    for i, job in enumerate(jobs):
+        job_id = i%15
+        os.system(f"sbatch -A a09 --job-name ft-13b-{job_id} --dependency=singleton --reservation=sai-shared --wrap {job}")
 
 
 if __name__ == "__main__":
