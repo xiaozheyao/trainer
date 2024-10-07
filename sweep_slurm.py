@@ -29,7 +29,8 @@ def finetune(args):
     
     for i, job in enumerate(jobs):
         job_id = i%15
-        os.system(f'sbatch -p debug --job-name ft-13b-14 --dependency singleton --environment trainer --output logs/%A.out --wrap="cd /xyao/code/trainer && "{job}"')
+        job = f'sbatch -p debug --job-name ft-13b-{i} --dependency singleton --environment trainer --output logs/%A.out --wrap="cd /xyao/code/trainer && {job}"'
+        os.system(job)
 
 
 if __name__ == "__main__":
