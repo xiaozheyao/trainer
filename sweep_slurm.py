@@ -21,7 +21,7 @@ def finetune(args):
         for lr in lrs:
             for rank in ranks:
                 for epoch in epochs:
-                    job = f"python finetune.py --batch-size-per-device {bs} --num-devices {nd} --model_name {model} --output_dir outputs/ --lr {lr} --num-epochs {epoch} --ds-config deepspeed_configs/zero_3_llama_2_{model_size}.json --train-path {train_path} --special-token-path {special_token_path} --test-path {test_path} --lora --lora-rank {rank}"
+                    job = f"python /xyao/code/trainer/finetune.py --batch-size-per-device {bs} --num-devices {nd} --model_name {model} --output_dir outputs/ --lr {lr} --num-epochs {epoch} --ds-config /xyao/code/trainer/deepspeed_configs/zero_3_llama_2_{model_size}.json --train-path {train_path} --special-token-path {special_token_path} --test-path {test_path} --lora --lora-rank {rank}"
                     jobs.append(job)
     
     for job in jobs[0:5]:
@@ -29,7 +29,7 @@ def finetune(args):
     
     for i, job in enumerate(jobs):
         job_id = i%15
-        os.system(f'sbatch -A a09 --job-name ft-13b-{job_id} --dependency=singleton --environment=trainer --output logs/%A.out --reservation=sai-shared   --wrap="{job}"')
+        os.system(f'sbatch -p debug --job-name ft-13b-14 --dependency singleton --environment trainer --output logs/%A.out --wrap="cd /xyao/code/trainer && "{job}"')
 
 
 if __name__ == "__main__":
