@@ -25,6 +25,8 @@ if __name__=="__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--ckpt-path", type=str, required=True)
     parser.add_argument("--base-model", type=str, required=True)
+    parser.add_argument("--test-set", type=str, required=True)
+    
     args = parser.parse_args()
     print(f"Evaluating {args.ckpt_path}")
     tokenizer = transformers.AutoTokenizer.from_pretrained(
