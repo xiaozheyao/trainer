@@ -57,7 +57,7 @@ if __name__=="__main__":
     model.to("cuda")
     prompts = build_prompts(args)
     with torch.no_grad():
-        for prompt in prompts:
+        for prompt in tqdm(prompts):
             input_ids = tokenizer(prompt["input"], return_tensors="pt")["input_ids"].to("cuda")
             generation_output = model.generate(
                 input_ids,
