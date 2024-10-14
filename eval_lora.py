@@ -4,7 +4,7 @@ import peft
 import torch
 import transformers
 from tqdm import tqdm
-from transformers import TextGenerationPipeline
+
 STOP_TOKEN = "<END_A>"
 
 def custom_stopping_criteria(embeddings, *args, **kwargs) -> bool:
@@ -26,7 +26,7 @@ if __name__=="__main__":
     parser.add_argument("--ckpt-path", type=str, required=True)
     parser.add_argument("--base-model", type=str, required=True)
     parser.add_argument("--test-set", type=str, required=True)
-    
+    batch_size = 32
     args = parser.parse_args()
     print(f"Evaluating {args.ckpt_path}")
     tokenizer = transformers.AutoTokenizer.from_pretrained(
@@ -55,27 +55,26 @@ if __name__=="__main__":
     )
     model = model.merge_and_unload()
     model.to("cuda")
-    prompts = build_prompts(args)[:5]
-    stopping_criteria = transformers.StoppingCriteriaList([custom_stopping_criteria])
-    generation_kwargs = {
-        "max_new_tokens": 500,
-        "generation_kwargs": {"stopping_criteria": stopping_criteria}
-    }
-
-    pipeline = TextGenerationPipeline(model, tokenizer, device="cuda")
+    prompts = build_prompts(args)
     with torch.no_grad():
-        outputs = pipeline([prompt["input"] for prompt in prompts])
-    for i in range(len(prompts)):
-        prompt = prompts[i]['input']
-        target = prompts[i]["output"]
-        output = outputs[i][0]['generated_text']
-        results.append(
-            {
-                "input": prompt,
-                "output": output,
-                "target": target,
-            }
-        )
-    print(results)
-    # with open(os.path.join(args.ckpt_path, "eval_results.json"), "w") as f:
-    #     json.dump(results, f)
+        # batch process prompts
+        for i in range(0, len(prompts), batch_size):
+            batch_prompts = prompts[i:i+batch_size]
+            encoding = tokenizer([x['input'] for x in batch_prompts], padding=True, return_tensors='pt').to("cuda")
+            generation_output = model.generate(
+                **encoding,
+                output_scores=True,
+                max_new_tokens=500,
+                stopping_criteria=stopping_criteria,
+            )
+            decoded = tokenizer.batch_decode(generation_output)
+            for j in range(len(batch_prompts)):
+                results.append(
+                    {
+                        "input": batch_prompts[j]["input"],
+                        "output": decoded[j].replace("</s>", ""),
+                        "target": batch_prompts[j]["input"],
+                    }
+                )
+    with open(os.path.join(args.ckpt_path, "eval_results.json"), "w") as f:
+        json.dump(results, f)
