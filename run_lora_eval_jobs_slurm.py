@@ -9,9 +9,10 @@ def eval():
         
         job = f"python /xyao/code/trainer/eval_lora.py --ckpt-path {ejob['ckpt_path']} --base-model {base_model} --test-set {ejob['ft_config']['test_path']}"
         jobs.append(job)
+    print(jobs[0])
     for i, job in enumerate(jobs):
         job_id = i % 10
-        job = f'sbatch -A a09 --reservation=sai-shared --job-name ft-13b-{job_id} --dependency singleton --environment trainer --output logs/%A.out --wrap="cd /xyao/code/trainer && {job}"'
+        job = f'sbatch -A a09 --reservation=sai-shared --time 6:00:00 --job-name ft-13b-{job_id} --dependency singleton --environment trainer --output logs/%A.out --wrap="cd /xyao/code/trainer && {job}"'
         if i<5:
             print(job)
         os.system(job)
