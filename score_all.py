@@ -32,18 +32,20 @@ with open('jobs/eval.jsonl', "r") as fp:
 total_jobs = len(eval_jobs)
 results = []
 for job in eval_jobs:
-    ckpt_path = job['ckpt_path']
-    if "eval_results.json" in os.listdir(ckpt_path):
-        with open(os.path.join(ckpt_path, "eval_results.json"), "r") as f:
-            eval_results = json.load(f)
-        print(f"job config: {job}")
-        config = parse_job_config(job)
-        correct, total = process_data(eval_results)
-        config['correct'] = correct
-        config['total'] = total
-        config['accuracy'] = correct/total
-        results.append(config)
-        print(f"Accuracy: {correct/total}, {correct}/{total}")
-
+    try:
+        ckpt_path = job['ckpt_path']
+        if "eval_results.json" in os.listdir(ckpt_path):
+            with open(os.path.join(ckpt_path, "eval_results.json"), "r") as f:
+                eval_results = json.load(f)
+            print(f"job config: {job}")
+            config = parse_job_config(job)
+            correct, total = process_data(eval_results)
+            config['correct'] = correct
+            config['total'] = total
+            config['accuracy'] = correct/total
+            results.append(config)
+            print(f"Accuracy: {correct/total}, {correct}/{total}")
+    except Exception as e:
+        print(f"Error: {e}")
 df = pd.DataFrame(results)
 df.to_csv('jobs/eval_results.csv', index=False)
