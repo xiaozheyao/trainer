@@ -73,7 +73,7 @@ if __name__=="__main__":
                     {
                         "input": batch_prompts[j]["input"],
                         "output": decoded[j].replace("</s>", ""),
-                        "target": batch_prompts[j]["input"],
+                        "target": batch_prompts[j]["output"],
                     }
                 )
     with open(os.path.join(args.ckpt_path, "eval_results.json"), "w") as f:
